@@ -1,13 +1,24 @@
-// cSpell:ignore Permissao, Ionicons, Resolucoes
+// cSpell:ignore Permissao, Ionicons, Resolucoes, Padrao, Icone
 
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, Platform, Alert, Modal, Image, Dimensions } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View, SafeAreaView,
+  TouchableOpacity,
+  Platform,
+  Alert,
+  Modal,
+  Image,
+  ToastAndroid
+} from 'react-native';
 import { Camera } from 'expo-camera'
 import { Ionicons } from '@expo/vector-icons';
 import Header from './components/Header'
+import * as Permissions from 'expo-permissions'
+import * as MediaLibrary from 'expo-media-library'
 
-const { width: wWidth, height: wHeight } = Dimensions.get("window");
-
+//Para o IoS, utilizar react-native-tiny-toast
 export default function App() {
   //tipo inicial da câmera (front ou back)
   const [tipoCamera, setTipoCamera] = useState(Camera.Constants.Type.back)
@@ -21,6 +32,8 @@ export default function App() {
   const [fotoCapturada, setFotoCapturada] = useState(null)
   //controle de exibição do Modal da Foto
   const [exibeModalFoto, setExibeModalFoto] = useState(false)
+  //tipo do icone que será exibido
+  const [iconePadrao, setIconePadrao] = useState('md')
 
   useEffect(() => {
     (async () => {
@@ -32,7 +45,28 @@ export default function App() {
         setTemPermissao(status === 'granted')
       }
     })();
+
+    (async () => {
+      //solicita permissao a galeria de imagens
+      const { status } = await Permissions.askAsync(Permissions.CAMERA_ROLL)
+      setTemPermissao(status === 'granted')
+    }
+    )();
+
   }, []);
+
+  useEffect(() => {
+    //dependendo do Sistema Operacional, exibiremos diferentes ícones
+    switch (Platform.OS) {
+      case 'android':
+        setIconePadrao('md')
+        break
+      case 'ios':
+        setIconePadrao('ios')
+        break
+    }
+  }, [])
+
 
 
   if (temPermissao === null) {
@@ -51,7 +85,18 @@ export default function App() {
         skipProcessing: true
       }
       const foto = await cameraRef.current.takePictureAsync(options)
-      Alert.alert(
+      let msg = 'Foto capturada com sucesso!'
+      {
+        iconePadrao === 'md'
+        ? ToastAndroid.showWithGravity(
+          msg,
+          ToastAndroid.LONG,
+          ToastAndroid.CENTER
+        )
+        : Alert.alert('Imagem capturada', msg)
+      }
+
+      /*Alert.alert(
         'Foto capturada',
         `A sua foto ${foto.height}X${foto.width} foi capturada com sucesso!`,
         [
@@ -67,7 +112,7 @@ export default function App() {
           { text: 'OK', onPress: () => console.log('OK pressionado') }
         ],
         { cancelable: false }
-      );
+      );*/
       setFotoCapturada(foto.uri)
       setExibeModalFoto(true)
       console.log(foto)
@@ -83,21 +128,30 @@ export default function App() {
     }
   }
 
-  async function redimensionaImagem() {
-    resizeImage = async image => {
-      const manipResult = await ImageManipulator.manipulateAsync(
-        image.localUri || image.uri,
-        [{ resize: { width: image.width * 0.5, height: image.height * 0.5 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
-      );
-
-    }
+  async function salvaFoto() {
+    const asset = await MediaLibrary.createAssetAsync(fotoCapturada)
+      .then(() => {
+        setExibeModalFoto(false)
+        let msg = "Imagem salva com sucesso!"
+        {
+          iconePadrao === 'md'
+          ? ToastAndroid.showWithGravity(
+            msg,
+            ToastAndroid.LONG,
+            ToastAndroid.CENTER
+          )
+          : Alert.alert('Foto salva', msg)
+        }
+      })
+      .catch(error => {
+        console.log('Ocorreu um erro!', error)
+      })
   }
 
-  return (
+    return (
     <SafeAreaView style={styles.container}>
       <Header title="FateCam" />
-      
+
       <Camera
         style={{ flex: 1 }}
         type={tipoCamera}
@@ -136,25 +190,37 @@ export default function App() {
             }}
           >
             <Ionicons name={
-                tipoFlash === Camera.Constants.FlashMode.on
+              tipoFlash === Camera.Constants.FlashMode.on
                 ? "md-flash"
                 : "md-flash-off"
-              } size={40} color="#9E9E9E" />              
+            } size={40} color="#9E9E9E" />
           </TouchableOpacity>
         </View>
       </Camera>
 
       {fotoCapturada &&
+
         <Modal
           animationType="slide"
-          transparent={false}
+          transparent={true}
           visible={exibeModalFoto}
         >
-          <View style={{ flex: 1, backgroundColor: '#BBB' }}>
-            <TouchableOpacity style={{ margin: 10, flexDirection: 'row-reverse' }} onPress={() => setExibeModalFoto(false)}>
-              <Ionicons name="md-close-circle" size={50} color="red" />
-            </TouchableOpacity>
+          <View style={styles.modalView}>
+            <View style={{ margin: 10, flexDirection: 'row-reverse' }}>
+              <TouchableOpacity
+                style={{ margin: 10 }}
+                onPress={() => setExibeModalFoto(false)}
+                accessible={true}
+                accessibilityLabel="Fechar"
+                accessibilityHint="Fecha a janela atual"
+              >
+                <Ionicons name={`${iconePadrao}-close-circle`} size={50} color="#d9534f" />
+              </TouchableOpacity>
 
+              <TouchableOpacity style={{ margin: 10 }} onPress={salvaFoto}>
+                <Ionicons name={`${iconePadrao}-cloud-upload`} size={50} color="#121212" />
+              </TouchableOpacity>
+            </View>
             <Image
               source={{ uri: fotoCapturada }}
               style={{ width: '100%', height: '70%', borderRadius: 30 }}
@@ -181,6 +247,15 @@ const styles = StyleSheet.create({
   },
   touch: {
     margin: 20
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 35,
+    opacity: 0.95,
+    alignItems: "center",
+
   }
 });
 
