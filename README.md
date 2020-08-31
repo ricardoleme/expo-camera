@@ -2,7 +2,7 @@
 Exemplo em React Native (Expo) utilizando a câmera.
 
 
-# Primeiros passos
+## Primeiros passos
 
   - Instale o expo-cli de forma global
 ```sh
@@ -18,7 +18,7 @@ $ expo install expo-media-library
 $ expo start
 ```
  
-### Instalação via clone
+## Instalação via clone
 
 O projeto necessita do [node.js] para rodar.
 
@@ -30,7 +30,7 @@ $ cd expo-camera
 $ npm install -d
 $ node app
 ```
-### Gerando a APK para o Android 
+## Gerando a APK para o Android 
 
 - Obtenha uma conta gratuita do [Expo] antes de iniciar
 - Edite o arquivo app.json e informe os dados do bundle, conforme exemplo:
