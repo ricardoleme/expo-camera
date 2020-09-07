@@ -34,6 +34,8 @@ export default function App() {
   const [exibeModalFoto, setExibeModalFoto] = useState(false)
   //tipo do icone que será exibido
   const [iconePadrao, setIconePadrao] = useState('md')
+  //Foto salva no Cloudinary
+  const [fotoCloudinary, setFotoCloudinary] = useState(null)
 
   useEffect(() => {
     (async () => {
@@ -118,6 +120,25 @@ export default function App() {
       console.log(foto)
     }
   }
+async function cloudinaryUpload(foto){
+    const data = new FormData()
+    data.append('file', foto)
+    data.append('upload_preset', 'fatecam')
+    data.append("cloud_name", "fatecitu")
+    await fetch("https://api.cloudinary.com/v1_1/fatecitu/upload", {
+      method: "post",
+      body: data
+    }).then(res => res.json()).
+      then(data => {
+        setFotoCloudinary(data.secure_url)
+        Alert.alert(`Foto salva no Cloudinary na url ${JSON.stringify(data)}`)
+        console.log(JSON.stringify(data))
+
+      }).catch(err => {
+        console.log(err)
+        Alert.alert(`Não foi possível efetuar o Upload ${err}`)
+      })
+  }
 
   async function obterResolucoes() {
     var resolucoes = await cameraRef.current.getAvailablePictureSizesAsync("16:9");
@@ -129,10 +150,12 @@ export default function App() {
   }
 
   async function salvaFoto() {
+     cloudinaryUpload(fotoCapturada)
     const asset = await MediaLibrary.createAssetAsync(fotoCapturada)
       .then(() => {
         setExibeModalFoto(false)
         let msg = "Imagem salva com sucesso!"
+        console.log(JSON.stringify(asset))
         {
           iconePadrao === 'md'
           ? ToastAndroid.showWithGravity(
