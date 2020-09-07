@@ -1,4 +1,4 @@
-// cSpell:ignore Permissao, Ionicons, Resolucoes, Padrao, Icone
+// cSpell:ignore Permissao, Ionicons, Resolucoes, Padrao, Icone, Cloudinary
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -10,13 +10,16 @@ import {
   Alert,
   Modal,
   Image,
-  ToastAndroid
+  ToastAndroid,
+  ActivityIndicator
 } from 'react-native';
 import { Camera } from 'expo-camera'
 import { Ionicons } from '@expo/vector-icons';
 import Header from './components/Header'
 import * as Permissions from 'expo-permissions'
 import * as MediaLibrary from 'expo-media-library'
+
+
 
 //Para o IoS, utilizar react-native-tiny-toast
 export default function App() {
@@ -87,7 +90,12 @@ export default function App() {
         skipProcessing: true
       }
       const foto = await cameraRef.current.takePictureAsync(options)
-      let msg = 'Foto capturada com sucesso!'
+   
+        let msg = 'Foto capturada com sucesso!'
+      setFotoCapturada(foto.uri)
+      setExibeModalFoto(true)
+      
+      //console.log(foto)
       {
         iconePadrao === 'md'
         ? ToastAndroid.showWithGravity(
@@ -98,6 +106,8 @@ export default function App() {
         : Alert.alert('Imagem capturada', msg)
       }
 
+      
+      
       /*Alert.alert(
         'Foto capturada',
         `A sua foto ${foto.height}X${foto.width} foi capturada com sucesso!`,
@@ -115,12 +125,16 @@ export default function App() {
         ],
         { cancelable: false }
       );*/
-      setFotoCapturada(foto.uri)
-      setExibeModalFoto(true)
-      console.log(foto)
+      
     }
   }
-async function cloudinaryUpload(foto){
+async function cloudinaryUpload(){
+  setFotoCloudinary(null)
+  var foto = {
+    uri: fotoCapturada,
+    type: 'image/jpeg',
+    name: 'foto.jpg',
+  };
     const data = new FormData()
     data.append('file', foto)
     data.append('upload_preset', 'fatecam')
@@ -130,10 +144,7 @@ async function cloudinaryUpload(foto){
       body: data
     }).then(res => res.json()).
       then(data => {
-        setFotoCloudinary(data.secure_url)
-        Alert.alert(`Foto salva no Cloudinary na url ${JSON.stringify(data)}`)
-        console.log(JSON.stringify(data))
-
+        setFotoCloudinary(data.public_id)        
       }).catch(err => {
         console.log(err)
         Alert.alert(`Não foi possível efetuar o Upload ${err}`)
@@ -149,13 +160,15 @@ async function cloudinaryUpload(foto){
     }
   }
 
-  async function salvaFoto() {
-     cloudinaryUpload(fotoCapturada)
+    async function salvaFoto() {
+      cloudinaryUpload()
     const asset = await MediaLibrary.createAssetAsync(fotoCapturada)
-      .then(() => {
-        setExibeModalFoto(false)
+    MediaLibrary.createAlbumAsync('Fatecam', asset)
+     
+        //setExibeModalFoto(false)
         let msg = "Imagem salva com sucesso!"
-        console.log(JSON.stringify(asset))
+       
+        
         {
           iconePadrao === 'md'
           ? ToastAndroid.showWithGravity(
@@ -165,28 +178,26 @@ async function cloudinaryUpload(foto){
           )
           : Alert.alert('Foto salva', msg)
         }
-      })
-      .catch(error => {
-        console.log('Ocorreu um erro!', error)
-      })
   }
+ 
 
     return (
     <SafeAreaView style={styles.container}>
       <Header title="FateCam" />
-
+           
       <Camera
         style={{ flex: 1 }}
         type={tipoCamera}
         ref={cameraRef}
         flashMode={tipoFlash}
       >
+       
         <View style={styles.camera}>
           <TouchableOpacity
             style={styles.touch}
             onPress={tirarFoto}
           >
-            <Ionicons name="md-camera" size={40} color="#9E9E9E" />
+            <Ionicons name={`${iconePadrao}-camera`} size={40} color="#9E9E9E" />
             { /*Consulte a lista de ícones em: https://icons.expo.fyi */}
           </TouchableOpacity>
           <TouchableOpacity
@@ -199,7 +210,7 @@ async function cloudinaryUpload(foto){
               )
             }}
           >
-            <Ionicons name="md-reverse-camera" size={40} color="#9E9E9E" />
+            <Ionicons name={`${iconePadrao}-reverse-camera`} size={40} color="#9E9E9E" />
 
           </TouchableOpacity>
           <TouchableOpacity
@@ -214,8 +225,8 @@ async function cloudinaryUpload(foto){
           >
             <Ionicons name={
               tipoFlash === Camera.Constants.FlashMode.on
-                ? "md-flash"
-                : "md-flash-off"
+                ? iconePadrao+"-flash"
+                : iconePadrao+"-flash-off"
             } size={40} color="#9E9E9E" />
           </TouchableOpacity>
         </View>
@@ -229,25 +240,39 @@ async function cloudinaryUpload(foto){
           visible={exibeModalFoto}
         >
           <View style={styles.modalView}>
-            <View style={{ margin: 10, flexDirection: 'row-reverse' }}>
+            <View style={{ flexDirection: 'row-reverse' }}>
               <TouchableOpacity
-                style={{ margin: 10 }}
-                onPress={() => setExibeModalFoto(false)}
+                style={{ margin: 2 }}
+                onPress={() => {
+                  setFotoCloudinary(null)
+                  setExibeModalFoto(false)
+                }}
                 accessible={true}
                 accessibilityLabel="Fechar"
                 accessibilityHint="Fecha a janela atual"
               >
-                <Ionicons name={`${iconePadrao}-close-circle`} size={50} color="#d9534f" />
+                <Ionicons name={`${iconePadrao}-close-circle`} size={30} color="#d9534f" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={{ margin: 10 }} onPress={salvaFoto}>
-                <Ionicons name={`${iconePadrao}-cloud-upload`} size={50} color="#121212" />
+              <TouchableOpacity style={{ margin: 2 }} onPress={salvaFoto}>
+                <Ionicons name={`${iconePadrao}-cloud-upload`} size={30} color="#121212" />
               </TouchableOpacity>
             </View>
             <Image
               source={{ uri: fotoCapturada }}
-              style={{ width: '100%', height: '70%', borderRadius: 30 }}
+              style={{ width: '90%', height: '40%', borderRadius: 20 }}
             />
+            {fotoCloudinary 
+            ? <Image
+            source={{ uri: 'https://res.cloudinary.com/fatecitu/image/upload/w_400,h_400,c_thumb,g_face,r_max,e_sepia/'+fotoCloudinary+'.jpg' }}
+            style={{ width: '90%', height: '50%' }}
+          />
+
+          :  <>
+          <Text>Salve a imagem para processar o thumbnail...</Text>
+          <ActivityIndicator size="large" color="#0000ff" />
+          </>
+            }
           </View>
         </Modal>
 
@@ -272,10 +297,10 @@ const styles = StyleSheet.create({
     margin: 20
   },
   modalView: {
-    margin: 20,
+    margin: 10,
     backgroundColor: "white",
     borderRadius: 20,
-    padding: 35,
+    padding: 15,
     opacity: 0.95,
     alignItems: "center",
 

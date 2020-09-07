@@ -1,5 +1,6 @@
 #ignorando o folder node_modules. Para instalar, os pacotes utilize npm i
 node_modules/
+.expo
  
 #ignorando arquivos
 package-lock.json

@@ -17,6 +17,15 @@ $ expo install expo-permissions
 $ expo install expo-media-library
 $ expo start
 ```
+
+## Animações
+
+Será necessário instalar o pacote Lottie
+```sh
+$ expo install lottie-react-native
+```
+
+Para inserir a animação, cria a sua animação no Adobe After Affects e exporte para JSON, ou então, acesse: https://lottiefiles.com/ e escolha uma animação pronta.
  
 ## Instalação via clone
 
