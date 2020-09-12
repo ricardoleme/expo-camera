@@ -136,10 +136,12 @@ async function cloudinaryUpload(){
     name: 'foto.jpg',
   };
     const data = new FormData()
+    let uploadCloudinary = "nomeDaPasta"
+    let cloudNameCloudinary = "nomeDoSeuCloudName"
     data.append('file', foto)
-    data.append('upload_preset', 'fatecam')
-    data.append("cloud_name", "fatecitu")
-    await fetch("https://api.cloudinary.com/v1_1/fatecitu/upload", {
+    data.append('upload_preset', uploadCloudinary)
+    data.append("cloud_name", cloudNameCloudinary)
+    await fetch(`https://api.cloudinary.com/v1_1/${cloudNameCloudinary}/upload`, {
       method: "post",
       body: data
     }).then(res => res.json()).
