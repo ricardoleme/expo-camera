@@ -1,5 +1,5 @@
 # Expo Camera
-Exemplo em React Native (Expo) utilizando a câmera.
+Exemplo em React Native (Expo) utilizando a API da Câmera.
 
 
 ## Primeiros passos

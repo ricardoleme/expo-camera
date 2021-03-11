@@ -1,5 +1,3 @@
-// cSpell:ignore Permissao, Ionicons, Resolucoes, Padrao, Icone, Cloudinary
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
@@ -10,16 +8,13 @@ import {
   Alert,
   Modal,
   Image,
-  ToastAndroid,
-  ActivityIndicator
+  ToastAndroid
 } from 'react-native';
 import { Camera } from 'expo-camera'
 import { Ionicons } from '@expo/vector-icons';
 import Header from './components/Header'
 import * as Permissions from 'expo-permissions'
 import * as MediaLibrary from 'expo-media-library'
-
-
 
 //Para o IoS, utilizar react-native-tiny-toast
 export default function App() {
@@ -29,6 +24,8 @@ export default function App() {
   const [tipoFlash, setTipoFlash] = useState(Camera.Constants.FlashMode.on)
   //status do acesso à câmera
   const [temPermissao, setTemPermissao] = useState(null)
+  //status do acesso à galeria
+  const [temPermissaoGaleria, setTemPermissaoGaleria] = useState(null)
   //referência da câmera
   const cameraRef = useRef(null)
   //referência a foto capturada
@@ -37,8 +34,6 @@ export default function App() {
   const [exibeModalFoto, setExibeModalFoto] = useState(false)
   //tipo do icone que será exibido
   const [iconePadrao, setIconePadrao] = useState('md')
-  //Foto salva no Cloudinary
-  const [fotoCloudinary, setFotoCloudinary] = useState(null)
 
   useEffect(() => {
     (async () => {
@@ -54,7 +49,7 @@ export default function App() {
     (async () => {
       //solicita permissao a galeria de imagens
       const { status } = await Permissions.askAsync(Permissions.CAMERA_ROLL)
-      setTemPermissao(status === 'granted')
+      setTemPermissaoGaleria(status === 'granted')
     }
     )();
 
@@ -72,12 +67,6 @@ export default function App() {
     }
   }, [])
 
-
-
-  if (temPermissao === null) {
-    return (<View><Text>Conteúdo Nulo</Text></View>)
-  }
-
   if (temPermissao === false) {
     return <Text>Acesso negado à câmera ou o seu equipamento não dispõem de uma!</Text>;
   }
@@ -87,70 +76,29 @@ export default function App() {
       await obterResolucoes()
       const options = {
         quality: 0.5,
-        skipProcessing: true
+        skipProcessing: true,
+        base64: true
       }
       const foto = await cameraRef.current.takePictureAsync(options)
-   
-        let msg = 'Foto capturada com sucesso!'
       setFotoCapturada(foto.uri)
       setExibeModalFoto(true)
-      
-      //console.log(foto)
-      {
-        iconePadrao === 'md'
+
+
+      let msg = 'Foto capturada com sucesso!'
+      iconePadrao === 'md'
         ? ToastAndroid.showWithGravity(
           msg,
           ToastAndroid.LONG,
           ToastAndroid.CENTER
         )
         : Alert.alert('Imagem capturada', msg)
-      }
 
-      
-      
-      /*Alert.alert(
-        'Foto capturada',
-        `A sua foto ${foto.height}X${foto.width} foi capturada com sucesso!`,
-        [
-          {
-            text: 'Dispensar aviso',
-            onPress: () => console.log('Dispensar aviso pressionado')
-          },
-          {
-            text: 'Cancelar',
-            onPress: () => console.log('Cancelar pressionado'),
-            style: 'cancel'
-          },
-          { text: 'OK', onPress: () => console.log('OK pressionado') }
-        ],
-        { cancelable: false }
-      );*/
-      
+
+
+
+      //console.log(foto)
+
     }
-  }
-async function cloudinaryUpload(){
-  setFotoCloudinary(null)
-  var foto = {
-    uri: fotoCapturada,
-    type: 'image/jpeg',
-    name: 'foto.jpg',
-  };
-    const data = new FormData()
-    let uploadCloudinary = "nomeDaPasta"
-    let cloudNameCloudinary = "nomeDoSeuCloudName"
-    data.append('file', foto)
-    data.append('upload_preset', uploadCloudinary)
-    data.append("cloud_name", cloudNameCloudinary)
-    await fetch(`https://api.cloudinary.com/v1_1/${cloudNameCloudinary}/upload`, {
-      method: "post",
-      body: data
-    }).then(res => res.json()).
-      then(data => {
-        setFotoCloudinary(data.public_id)        
-      }).catch(err => {
-        console.log(err)
-        Alert.alert(`Não foi possível efetuar o Upload ${err}`)
-      })
   }
 
   async function obterResolucoes() {
@@ -162,38 +110,27 @@ async function cloudinaryUpload(){
     }
   }
 
-    async function salvaFoto() {
-      cloudinaryUpload()
-    const asset = await MediaLibrary.createAssetAsync(fotoCapturada)
-    MediaLibrary.createAlbumAsync('Fatecam', asset)
-     
-        //setExibeModalFoto(false)
-        let msg = "Imagem salva com sucesso!"
-       
-        
-        {
-          iconePadrao === 'md'
-          ? ToastAndroid.showWithGravity(
-            msg,
-            ToastAndroid.LONG,
-            ToastAndroid.CENTER
-          )
-          : Alert.alert('Foto salva', msg)
-        }
+  async function salvaFoto() {
+    if (temPermissaoGaleria) {
+      setExibeModalFoto(false)
+      const asset = await MediaLibrary.createAssetAsync(fotoCapturada);
+      await MediaLibrary.createAlbumAsync('Fatecam', asset, false);
+    }
+    else {
+      Alert.alert('Sem permissão', 'Infelizmente o App não possui permissão para salvar')
+    }
   }
- 
 
-    return (
+  return (
     <SafeAreaView style={styles.container}>
       <Header title="FateCam" />
-           
       <Camera
         style={{ flex: 1 }}
         type={tipoCamera}
         ref={cameraRef}
         flashMode={tipoFlash}
       >
-       
+
         <View style={styles.camera}>
           <TouchableOpacity
             style={styles.touch}
@@ -212,7 +149,7 @@ async function cloudinaryUpload(){
               )
             }}
           >
-            <Ionicons name={`${iconePadrao}-reverse-camera`} size={40} color="#9E9E9E" />
+            <Ionicons name={`${iconePadrao}-camera-reverse`} size={40} color="#9E9E9E" />
 
           </TouchableOpacity>
           <TouchableOpacity
@@ -227,8 +164,8 @@ async function cloudinaryUpload(){
           >
             <Ionicons name={
               tipoFlash === Camera.Constants.FlashMode.on
-                ? iconePadrao+"-flash"
-                : iconePadrao+"-flash-off"
+                ? iconePadrao + "-flash"
+                : iconePadrao + "-flash-off"
             } size={40} color="#9E9E9E" />
           </TouchableOpacity>
         </View>
@@ -246,35 +183,24 @@ async function cloudinaryUpload(){
               <TouchableOpacity
                 style={{ margin: 2 }}
                 onPress={() => {
-                  setFotoCloudinary(null)
                   setExibeModalFoto(false)
                 }}
                 accessible={true}
                 accessibilityLabel="Fechar"
                 accessibilityHint="Fecha a janela atual"
               >
-                <Ionicons name={`${iconePadrao}-close-circle`} size={30} color="#d9534f" />
+                <Ionicons name={`${iconePadrao}-close-circle`} size={40} color="#d9534f" />
               </TouchableOpacity>
 
               <TouchableOpacity style={{ margin: 2 }} onPress={salvaFoto}>
-                <Ionicons name={`${iconePadrao}-cloud-upload`} size={30} color="#121212" />
+                <Ionicons name={`${iconePadrao}-cloud-upload`} size={40} color="#121212" />
               </TouchableOpacity>
             </View>
             <Image
               source={{ uri: fotoCapturada }}
-              style={{ width: '90%', height: '40%', borderRadius: 20 }}
+              style={{ width: '90%', height: '70%', borderRadius: 20 }}
             />
-            {fotoCloudinary 
-            ? <Image
-            source={{ uri: 'https://res.cloudinary.com/fatecitu/image/upload/w_400,h_400,c_thumb,g_face,r_max,e_sepia/'+fotoCloudinary+'.jpg' }}
-            style={{ width: '90%', height: '50%' }}
-          />
 
-          :  <>
-          <Text>Salve a imagem para processar o thumbnail...</Text>
-          <ActivityIndicator size="large" color="#0000ff" />
-          </>
-            }
           </View>
         </Modal>
 
