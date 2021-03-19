@@ -129,6 +129,7 @@ export default function App() {
         type={tipoCamera}
         ref={cameraRef}
         flashMode={tipoFlash}
+        ratio={"16:9"}
       >
 
         <View style={styles.camera}>
